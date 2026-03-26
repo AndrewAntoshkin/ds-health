@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ds-health</title>
+  <meta name="description" content="Analyze live websites for design-system consistency.">
+  <style>
+    :root {
+      --bg: #09090b;
+      --panel: #111114;
+      --panel-2: #17171b;
+      --text: #fafafa;
+      --text-sub: #a1a1aa;
+      --border: #27272a;
+      --accent: #7dd3fc;
+      --good: #86efac;
+      --warn: #facc15;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+    body { min-height: 100vh; }
+    main { max-width: 1100px; margin: 0 auto; padding: 48px 20px 80px; }
+    h1, h2, h3, p { margin: 0; }
+    .hero { display: grid; gap: 20px; margin-bottom: 40px; }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-sub); }
+    .title { font-size: clamp(32px, 6vw, 60px); line-height: 0.95; letter-spacing: -0.04em; max-width: 10ch; }
+    .sub { max-width: 60ch; color: var(--text-sub); font-size: 16px; line-height: 1.65; }
+    .shell { background: var(--panel); border: 1px solid var(--border); border-radius: 24px; padding: 20px; }
+    form { display: grid; gap: 12px; }
+    label { font-size: 14px; color: var(--text-sub); }
+    .input-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+    input {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 14px 16px;
+      font-size: 15px;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      background: var(--text);
+      color: var(--bg);
+      padding: 0 18px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .hint { font-size: 13px; color: var(--text-sub); }
+    .error { margin-top: 12px; color: #fda4af; font-size: 14px; }
+    .results { display: grid; gap: 20px; margin-top: 28px; }
+    .summary-grid, .metrics-grid, .lists-grid { display: grid; gap: 16px; }
+    .summary-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+    .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .lists-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+    }
+    .card h3 { font-size: 14px; color: var(--text-sub); margin-bottom: 12px; font-weight: 500; }
+    .score { font-size: 40px; line-height: 1; letter-spacing: -0.04em; }
+    .muted { color: var(--text-sub); font-size: 14px; line-height: 1.6; }
+    .metric-value { font-size: 28px; line-height: 1; margin-bottom: 8px; }
+    ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--text-sub); }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+    }
+    .signals { display: grid; gap: 12px; }
+    .signal {
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      background: var(--panel);
+    }
+    .signal.good { border-color: rgba(134, 239, 172, 0.25); }
+    .signal.warning { border-color: rgba(250, 204, 21, 0.25); }
+    .signal-title { font-size: 15px; margin-bottom: 6px; }
+    .signal-detail { color: var(--text-sub); font-size: 14px; line-height: 1.6; }
+    .loading { color: var(--text-sub); font-size: 14px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); }
+
+    @media (max-width: 640px) {
+      .input-row { grid-template-columns: 1fr; }
+      button { height: 48px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">ds-health</div>
+      <h1 class="title">Health check for your design system on a live site.</h1>
+      <p class="sub">Paste a public URL and get a quick report on visual consistency: colors, typography, spacing, radius, and the presence of a token layer.</p>
+    </section>
+
+    <section class="shell">
+      <form id="analyze-form">
+        <label for="url">Website URL</label>
+        <div class="input-row">
+          <input id="url" name="url" type="url" placeholder="https://example.com" value="https://barvian.me/" required>
+          <button id="submit" type="submit">Analyze</button>
+        </div>
+        <div class="hint">Public `http` or `https` URLs only. Local and private network URLs are blocked.</div>
+      </form>
+      <div id="error" class="error" hidden></div>
+      <div id="loading" class="loading" hidden>Analyzing live page…</div>
+    </section>
+
+    <section id="results" class="results" hidden>
+      <div class="summary-grid">
+        <div class="card">
+          <h3>Site</h3>
+          <div id="site-title" class="score" style="font-size:28px;"></div>
+          <p id="site-url" class="muted"></p>
+        </div>
+        <div class="card">
+          <h3>Overall health</h3>
+          <div id="overall-score" class="score"></div>
+          <p class="muted">Higher is more consistent.</p>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="card"><h3>Color</h3><div id="color-score" class="metric-value"></div><p class="muted">Token layer + color consolidation</p></div>
+        <div class="card"><h3>Typography</h3><div id="typography-score" class="metric-value"></div><p class="muted">Families, sizes, weights</p></div>
+        <div class="card"><h3>Spacing</h3><div id="spacing-score" class="metric-value"></div><p class="muted">Padding and gaps</p></div>
+        <div class="card"><h3>Radius</h3><div id="radius-score" class="metric-value"></div><p class="muted">Corner shape consistency</p></div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="card"><h3>Sampled elements</h3><div id="elements-sampled" class="metric-value"></div><p class="muted">Visible DOM elements scanned</p></div>
+        <div class="card"><h3>CSS variables</h3><div id="css-variables" class="metric-value"></div><p class="muted">Detected on `:root`</p></div>
+        <div class="card"><h3>Unique text colors</h3><div id="text-colors" class="metric-value"></div><p class="muted">Across visible text nodes</p></div>
+        <div class="card"><h3>Unique font sizes</h3><div id="font-sizes" class="metric-value"></div><p class="muted">Across visible text nodes</p></div>
+      </div>
+
+      <div class="card">
+        <h3>Signals</h3>
+        <div id="signals" class="signals"></div>
+      </div>
+
+      <div class="lists-grid">
+        <div class="card">
+          <h3>Top text colors</h3>
+          <ul id="list-text-colors"></ul>
+        </div>
+        <div class="card">
+          <h3>Top background colors</h3>
+          <ul id="list-bg-colors"></ul>
+        </div>
+        <div class="card">
+          <h3>Top font families</h3>
+          <ul id="list-font-families"></ul>
+        </div>
+        <div class="card">
+          <h3>Top font sizes</h3>
+          <ul id="list-font-sizes"></ul>
+        </div>
+        <div class="card">
+          <h3>Top spacing values</h3>
+          <ul id="list-spacing"></ul>
+        </div>
+        <div class="card">
+          <h3>Top radius values</h3>
+          <ul id="list-radius"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("analyze-form");
+    const urlInput = document.getElementById("url");
+    const submit = document.getElementById("submit");
+    const error = document.getElementById("error");
+    const loading = document.getElementById("loading");
+    const results = document.getElementById("results");
+
+    function setLoading(state) {
+      submit.disabled = state;
+      loading.hidden = !state;
+      error.hidden = true;
+    }
+
+    function renderList(id, items) {
+      const root = document.getElementById(id);
+      root.innerHTML = "";
+      if (!items.length) {
+        root.innerHTML = "<li><span>No data</span><span></span></li>";
+        return;
+      }
+      for (const item of items) {
+        const li = document.createElement("li");
+        li.innerHTML = `<span><code>${item.value}</code></span><span class="chip">${item.count}</span>`;
+        root.appendChild(li);
+      }
+    }
+
+    function renderSignals(items) {
+      const root = document.getElementById("signals");
+      root.innerHTML = "";
+      for (const item of items) {
+        const div = document.createElement("div");
+        div.className = `signal ${item.level}`;
+        div.innerHTML = `
+          <div class="signal-title">${item.title}</div>
+          <div class="signal-detail">${item.detail}</div>
+        `;
+        root.appendChild(div);
+      }
+    }
+
+    function renderReport(report) {
+      results.hidden = false;
+      document.getElementById("site-title").textContent = report.title;
+      document.getElementById("site-url").textContent = report.url;
+      document.getElementById("overall-score").textContent = report.health.overall;
+      document.getElementById("color-score").textContent = report.health.color;
+      document.getElementById("typography-score").textContent = report.health.typography;
+      document.getElementById("spacing-score").textContent = report.health.spacing;
+      document.getElementById("radius-score").textContent = report.health.radius;
+      document.getElementById("elements-sampled").textContent = report.summary.elementsSampled;
+      document.getElementById("css-variables").textContent = report.summary.cssVariables;
+      document.getElementById("text-colors").textContent = report.summary.textColors;
+      document.getElementById("font-sizes").textContent = report.summary.fontSizes;
+
+      renderSignals(report.signals);
+      renderList("list-text-colors", report.topValues.textColors);
+      renderList("list-bg-colors", report.topValues.backgroundColors);
+      renderList("list-font-families", report.topValues.fontFamilies);
+      renderList("list-font-sizes", report.topValues.fontSizes);
+      renderList("list-spacing", report.topValues.spacing);
+      renderList("list-radius", report.topValues.radius);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setLoading(true);
+
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: urlInput.value.trim() })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || "Analysis failed.");
+        }
+
+        renderReport(data.report);
+      } catch (err) {
+        error.hidden = false;
+        error.textContent = err.message || "Something went wrong.";
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>
