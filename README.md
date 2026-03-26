@@ -79,6 +79,64 @@ This runs the analyzer against `https://barvian.me/`.
 
 This is especially useful when you want a quick signal that a page feels inconsistent but you need something more concrete than taste alone.
 
+## How to read the report
+
+Treat the report as a fast signal, not as a final design review.
+
+- `90-100` means the sampled page looks tightly controlled: few colors, restrained typography, and a small spacing/radius set
+- `70-89` usually means the page is mostly consistent but has some fragmentation or a few one-off values
+- `50-69` is a sign that the visual system may be drifting and needs a closer look
+- below `50` usually means too many competing values are showing up in the sampled page
+
+How to read each section:
+
+- `Overall health` is the average of the four category scores
+- `Color` rewards fewer text/background colors and the presence of CSS variables
+- `Typography` looks at the number of font families, font sizes, and font weights in visible text
+- `Spacing` looks at how many distinct padding and gap values appear
+- `Radius` looks at how many distinct non-zero border-radius values appear
+- `Signals` call out the most obvious reasons the score may be high or low
+- `Top values` help you see where consolidation would likely have the biggest impact
+
+The most useful pattern is: score first, then signals, then top values.
+
+## Example result
+
+Running the analyzer against `https://barvian.me/` produced:
+
+```json
+{
+  "url": "https://barvian.me/",
+  "title": "Maxwell Barvian",
+  "health": {
+    "color": 100,
+    "typography": 100,
+    "spacing": 100,
+    "radius": 100,
+    "overall": 100
+  },
+  "summary": {
+    "elementsSampled": 63,
+    "textNodesSampled": 41,
+    "cssVariables": 4,
+    "textColors": 3,
+    "backgroundColors": 2,
+    "fontFamilies": 1,
+    "fontSizes": 1,
+    "fontWeights": 2,
+    "spacingValues": 4,
+    "radiusValues": 1
+  },
+  "firstSignal": {
+    "level": "good",
+    "title": "Baseline looks healthy",
+    "detail": "No obvious design-system drift signals were found in the sampled page."
+  }
+}
+```
+
+This is the kind of output you want from a disciplined site: restrained values, clear consistency, and no obvious fragmentation signals.
+
 ## Notes
 
 - only public `http` and `https` URLs are supported
