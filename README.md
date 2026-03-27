@@ -11,6 +11,10 @@ Project: https://github.com/AndrewAntoshkin/ds-health
 - spacing
 - radius
 - presence of a CSS variable layer
+- executive summary
+- priority issues
+- recommended actions
+- normalized value groups
 
 ## What it is right now
 
@@ -31,6 +35,8 @@ This tool gives a lightweight signal:
 - whether spacing is converging to a scale
 - whether corner radii are controlled
 - whether a token layer seems to exist
+- what the main problems are
+- what to fix first
 
 ## MVP shape
 
@@ -74,8 +80,10 @@ This runs the analyzer against `https://barvian.me/`.
 1. Start the app locally
 2. Paste a public URL
 3. Review the overall health score
-4. Check the signals section for likely drift
-5. Inspect top colors, typography, spacing, and radius values
+4. Read the executive summary for the plain-English interpretation
+5. Check priority issues and recommended actions
+6. Inspect signals and top values for supporting evidence
+7. Use normalized spacing and radius groups to spot consolidation opportunities
 
 This is especially useful when you want a quick signal that a page feels inconsistent but you need something more concrete than taste alone.
 
@@ -96,9 +104,13 @@ How to read each section:
 - `Spacing` looks at how many distinct padding and gap values appear
 - `Radius` looks at how many distinct non-zero border-radius values appear
 - `Signals` call out the most obvious reasons the score may be high or low
+- `Executive summary` translates the raw report into a human-readable conclusion
+- `Priority issues` show what is worth fixing first
+- `Recommended actions` suggest the next practical cleanup steps
 - `Top values` help you see where consolidation would likely have the biggest impact
+- `Normalized groups` collapse near-identical spacing and radius values into clearer buckets
 
-The most useful pattern is: score first, then signals, then top values.
+The most useful pattern is: score first, then summary, then priority issues, then supporting values.
 
 ## Example result
 

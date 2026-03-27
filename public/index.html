@@ -16,6 +16,7 @@
       --accent: #7dd3fc;
       --good: #86efac;
       --warn: #facc15;
+      --bad: #fda4af;
     }
 
     * { box-sizing: border-box; }
@@ -68,6 +69,7 @@
     .score { font-size: 40px; line-height: 1; letter-spacing: -0.04em; }
     .muted { color: var(--text-sub); font-size: 14px; line-height: 1.6; }
     .metric-value { font-size: 28px; line-height: 1; margin-bottom: 8px; }
+    .metric-line { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
     ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
     li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--text-sub); }
     .chip {
@@ -80,6 +82,10 @@
       border: 1px solid var(--border);
       color: var(--text-sub);
     }
+    .chip.healthy { color: var(--good); border-color: rgba(134, 239, 172, 0.25); }
+    .chip.mostly-consistent { color: var(--accent); border-color: rgba(125, 211, 252, 0.25); }
+    .chip.needs-attention { color: var(--warn); border-color: rgba(250, 204, 21, 0.25); }
+    .chip.fragmented { color: var(--bad); border-color: rgba(253, 164, 175, 0.25); }
     .signals { display: grid; gap: 12px; }
     .signal {
       border-radius: 18px;
@@ -89,10 +95,13 @@
     }
     .signal.good { border-color: rgba(134, 239, 172, 0.25); }
     .signal.warning { border-color: rgba(250, 204, 21, 0.25); }
+    .signal.priority { border-color: rgba(253, 164, 175, 0.25); }
+    .signal.action { border-color: rgba(125, 211, 252, 0.25); }
     .signal-title { font-size: 15px; margin-bottom: 6px; }
     .signal-detail { color: var(--text-sub); font-size: 14px; line-height: 1.6; }
     .loading { color: var(--text-sub); font-size: 14px; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); }
+    .summary-text { font-size: 18px; line-height: 1.7; max-width: 60ch; }
 
     @media (max-width: 640px) {
       .input-row { grid-template-columns: 1fr; }
@@ -130,16 +139,24 @@
         </div>
         <div class="card">
           <h3>Overall health</h3>
-          <div id="overall-score" class="score"></div>
+          <div class="metric-line">
+            <div id="overall-score" class="score"></div>
+            <span id="overall-label" class="chip"></span>
+          </div>
           <p class="muted">Higher is more consistent.</p>
         </div>
       </div>
 
+      <div class="card">
+        <h3>Executive summary</h3>
+        <p id="executive-summary" class="summary-text"></p>
+      </div>
+
       <div class="metrics-grid">
-        <div class="card"><h3>Color</h3><div id="color-score" class="metric-value"></div><p class="muted">Token layer + color consolidation</p></div>
-        <div class="card"><h3>Typography</h3><div id="typography-score" class="metric-value"></div><p class="muted">Families, sizes, weights</p></div>
-        <div class="card"><h3>Spacing</h3><div id="spacing-score" class="metric-value"></div><p class="muted">Padding and gaps</p></div>
-        <div class="card"><h3>Radius</h3><div id="radius-score" class="metric-value"></div><p class="muted">Corner shape consistency</p></div>
+        <div class="card"><h3>Color</h3><div class="metric-line"><div id="color-score" class="metric-value"></div><span id="color-label" class="chip"></span></div><p class="muted">Token layer + color consolidation</p></div>
+        <div class="card"><h3>Typography</h3><div class="metric-line"><div id="typography-score" class="metric-value"></div><span id="typography-label" class="chip"></span></div><p class="muted">Families, sizes, weights</p></div>
+        <div class="card"><h3>Spacing</h3><div class="metric-line"><div id="spacing-score" class="metric-value"></div><span id="spacing-label" class="chip"></span></div><p class="muted">Padding and gaps</p></div>
+        <div class="card"><h3>Radius</h3><div class="metric-line"><div id="radius-score" class="metric-value"></div><span id="radius-label" class="chip"></span></div><p class="muted">Corner shape consistency</p></div>
       </div>
 
       <div class="summary-grid">
@@ -152,6 +169,17 @@
       <div class="card">
         <h3>Signals</h3>
         <div id="signals" class="signals"></div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="card">
+          <h3>Priority issues</h3>
+          <div id="priorities" class="signals"></div>
+        </div>
+        <div class="card">
+          <h3>Recommended actions</h3>
+          <div id="recommendations" class="signals"></div>
+        </div>
       </div>
 
       <div class="lists-grid">
@@ -179,6 +207,14 @@
           <h3>Top radius values</h3>
           <ul id="list-radius"></ul>
         </div>
+        <div class="card">
+          <h3>Normalized spacing groups</h3>
+          <ul id="list-spacing-groups"></ul>
+        </div>
+        <div class="card">
+          <h3>Normalized radius groups</h3>
+          <ul id="list-radius-groups"></ul>
+        </div>
       </div>
     </section>
   </main>
@@ -191,10 +227,25 @@
     const loading = document.getElementById("loading");
     const results = document.getElementById("results");
 
+    function toneClass(label) {
+      return String(label || "")
+        .toLowerCase()
+        .replaceAll(" ", "-");
+    }
+
+    function setChip(id, label) {
+      const el = document.getElementById(id);
+      el.className = `chip ${toneClass(label)}`.trim();
+      el.textContent = label || "Unknown";
+    }
+
     function setLoading(state) {
       submit.disabled = state;
       loading.hidden = !state;
       error.hidden = true;
+      if (state) {
+        results.hidden = true;
+      }
     }
 
     function renderList(id, items) {
@@ -225,27 +276,57 @@
       }
     }
 
+    function renderCallouts(id, items, type) {
+      const root = document.getElementById(id);
+      root.innerHTML = "";
+
+      if (!items.length) {
+        root.innerHTML = `<div class="signal ${type}"><div class="signal-detail">No major issues detected.</div></div>`;
+        return;
+      }
+
+      for (const item of items) {
+        const div = document.createElement("div");
+        div.className = `signal ${type}`;
+        div.innerHTML = `
+          <div class="signal-title">${item.title}</div>
+          <div class="signal-detail">${item.detail}</div>
+        `;
+        root.appendChild(div);
+      }
+    }
+
     function renderReport(report) {
       results.hidden = false;
       document.getElementById("site-title").textContent = report.title;
       document.getElementById("site-url").textContent = report.url;
       document.getElementById("overall-score").textContent = report.health.overall;
+      document.getElementById("executive-summary").textContent = report.executiveSummary;
+      setChip("overall-label", report.health.label);
       document.getElementById("color-score").textContent = report.health.color;
       document.getElementById("typography-score").textContent = report.health.typography;
       document.getElementById("spacing-score").textContent = report.health.spacing;
       document.getElementById("radius-score").textContent = report.health.radius;
+      setChip("color-label", report.health.labels.color);
+      setChip("typography-label", report.health.labels.typography);
+      setChip("spacing-label", report.health.labels.spacing);
+      setChip("radius-label", report.health.labels.radius);
       document.getElementById("elements-sampled").textContent = report.summary.elementsSampled;
       document.getElementById("css-variables").textContent = report.summary.cssVariables;
       document.getElementById("text-colors").textContent = report.summary.textColors;
       document.getElementById("font-sizes").textContent = report.summary.fontSizes;
 
       renderSignals(report.signals);
+      renderCallouts("priorities", report.priorities, "priority");
+      renderCallouts("recommendations", report.recommendations, "action");
       renderList("list-text-colors", report.topValues.textColors);
       renderList("list-bg-colors", report.topValues.backgroundColors);
       renderList("list-font-families", report.topValues.fontFamilies);
       renderList("list-font-sizes", report.topValues.fontSizes);
       renderList("list-spacing", report.topValues.spacing);
       renderList("list-radius", report.topValues.radius);
+      renderList("list-spacing-groups", report.clustered.spacing);
+      renderList("list-radius-groups", report.clustered.radius);
     }
 
     form.addEventListener("submit", async (event) => {
@@ -266,6 +347,7 @@
 
         renderReport(data.report);
       } catch (err) {
+        results.hidden = true;
         error.hidden = false;
         error.textContent = err.message || "Something went wrong.";
       } finally {
