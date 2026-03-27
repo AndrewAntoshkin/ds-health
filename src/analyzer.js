@@ -393,6 +393,8 @@ function resolveChromeExecutable() {
   return FALLBACK_CHROME_PATHS.find((candidate) => fs.existsSync(candidate)) || undefined;
 }
 
+export { ensurePublicUrl, buildReport, scoreLabel };
+
 export async function analyzeUrl(inputUrl) {
   const url = ensurePublicUrl(inputUrl);
   const browser = await chromium.launch({

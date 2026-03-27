@@ -6,6 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "test": "node --test",
     "test:analyzer": "node src/run-sample-analysis.js"
   },
   "keywords": [

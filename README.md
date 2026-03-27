@@ -16,6 +16,18 @@ Project: https://github.com/AndrewAntoshkin/ds-health
 - recommended actions
 - normalized value groups
 
+## Quick navigation
+
+- [What it is right now](#what-it-is-right-now)
+- [Why](#why)
+- [Repository layout](#repository-layout)
+- [Run locally](#run-locally)
+- [API](#api)
+- [Typical flow](#typical-flow)
+- [How to read the report](#how-to-read-the-report)
+- [Testing](#testing)
+- [Contributing](#contributing)
+
 ## What it is right now
 
 This is a local demo tool.
@@ -38,11 +50,18 @@ This tool gives a lightweight signal:
 - what the main problems are
 - what to fix first
 
-## MVP shape
+## Repository layout
 
-- backend: Express + Playwright
-- frontend: static HTML/CSS/JS
-- analysis: computed styles from visible DOM elements
+- `src/server.js`
+  Express server and API endpoints
+- `src/analyzer.js`
+  URL validation, page sampling, report scoring, and recommendation logic
+- `src/run-sample-analysis.js`
+  one-shot CLI-style sample run
+- `public/index.html`
+  static UI for running analyses locally
+- `test/analyzer.test.js`
+  lightweight report-logic tests
 
 ## Run locally
 
@@ -67,23 +86,79 @@ If Playwright cannot find a browser on your machine:
 npx playwright install chromium
 ```
 
-## Sample CLI-style test
+## API
 
-```bash
-npm run test:analyzer
+### `POST /api/analyze`
+
+Request body:
+
+```json
+{
+  "url": "https://example.com"
+}
 ```
 
-This runs the analyzer against `https://barvian.me/`.
+Success response shape:
+
+```json
+{
+  "ok": true,
+  "report": {
+    "url": "https://example.com",
+    "title": "Example",
+    "health": {
+      "color": 100,
+      "typography": 100,
+      "spacing": 100,
+      "radius": 100,
+      "overall": 100,
+      "label": "Healthy",
+      "labels": {
+        "color": "Healthy",
+        "typography": "Healthy",
+        "spacing": "Healthy",
+        "radius": "Healthy"
+      }
+    },
+    "summary": {},
+    "executiveSummary": "…",
+    "priorities": [],
+    "recommendations": [],
+    "topValues": {},
+    "clustered": {},
+    "signals": []
+  }
+}
+```
+
+Error response shape:
+
+```json
+{
+  "ok": false,
+  "error": "Please enter a valid URL."
+}
+```
+
+### `GET /health`
+
+Returns:
+
+```json
+{
+  "ok": true
+}
+```
 
 ## Typical flow
 
-1. Start the app locally
-2. Paste a public URL
-3. Review the overall health score
-4. Read the executive summary for the plain-English interpretation
-5. Check priority issues and recommended actions
-6. Inspect signals and top values for supporting evidence
-7. Use normalized spacing and radius groups to spot consolidation opportunities
+1. Start the app locally.
+2. Paste a public URL.
+3. Review the overall health score.
+4. Read the executive summary for the plain-English interpretation.
+5. Check priority issues and recommended actions.
+6. Inspect signals and top values for supporting evidence.
+7. Use normalized spacing and radius groups to spot consolidation opportunities.
 
 This is especially useful when you want a quick signal that a page feels inconsistent but you need something more concrete than taste alone.
 
@@ -125,29 +200,41 @@ Running the analyzer against `https://barvian.me/` produced:
     "typography": 100,
     "spacing": 100,
     "radius": 100,
-    "overall": 100
+    "overall": 100,
+    "label": "Healthy"
   },
   "summary": {
-    "elementsSampled": 63,
+    "elementsSampled": 69,
     "textNodesSampled": 41,
     "cssVariables": 4,
     "textColors": 3,
-    "backgroundColors": 2,
+    "backgroundColors": 3,
     "fontFamilies": 1,
     "fontSizes": 1,
     "fontWeights": 2,
     "spacingValues": 4,
     "radiusValues": 1
   },
-  "firstSignal": {
-    "level": "good",
-    "title": "Baseline looks healthy",
-    "detail": "No obvious design-system drift signals were found in the sampled page."
-  }
+  "executiveSummary": "This page looks healthy. 4 CSS variables were detected, and no major consistency issues stood out in the sampled page."
 }
 ```
 
 This is the kind of output you want from a disciplined site: restrained values, clear consistency, and no obvious fragmentation signals.
+
+## Testing
+
+Quick checks:
+
+```bash
+npm test
+npm run test:analyzer
+```
+
+`npm test` covers report logic and URL validation.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup and expectations when changing scoring, sampling, or the API shape.
 
 ## Notes
 
