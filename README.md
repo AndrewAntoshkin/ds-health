@@ -241,3 +241,19 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup and expectations when c
 - only public `http` and `https` URLs are supported
 - localhost and private-network URLs are blocked
 - current scoring is heuristic and intended as an early signal, not a formal audit
+
+## Pipeline
+
+ds-health checks a live page after the spec and the code checks:
+
+```
+figma-to-design-md extracts the spec
+ds-context packs it for the model
+ui-repair patches design-system violations
+ds-eval scores whether the agent followed the system
+prompt-regress diffs two prompt versions
+
+ds-lint blocks raw values
+ds-coverage measures adoption
+ds-health checks the live page  ← you are here
+```
